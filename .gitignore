@@ -1,0 +1,42 @@
+# ------ iOS / Xcode ------
+.DS_Store
+*.xcuserstate
+*.xccheckout
+xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcodeproj/project.xcworkspace/xcuserdata
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods (如果你用)
+Pods/
+
+# ------ Python / FastAPI ------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+dist/
+build/
+.eggs/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ------ Secrets / Env ------
+.env
+.env.*
+*.pem
+*.key
+firebase*.json
+GoogleService-Info.plist
+Secrets.plist
