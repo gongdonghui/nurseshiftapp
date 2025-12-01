@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
-enum NurseButtonStyle { primary, secondary, ghost }
+enum NurseButtonStyle { primary, secondary, ghost, destructive }
 
 class NurseButton extends StatelessWidget {
   const NurseButton({
@@ -29,8 +29,9 @@ class NurseButton extends StatelessWidget {
         return AppColors.surfaceMuted;
       case NurseButtonStyle.ghost:
         return Colors.transparent;
+      case NurseButtonStyle.destructive:
+        return Colors.white;
       case NurseButtonStyle.primary:
-      default:
         return AppColors.primary;
     }
   }
@@ -41,17 +42,22 @@ class NurseButton extends StatelessWidget {
         return AppColors.textPrimary;
       case NurseButtonStyle.ghost:
         return AppColors.primary;
+      case NurseButtonStyle.destructive:
+        return Colors.red;
       case NurseButtonStyle.primary:
-      default:
         return Colors.white;
     }
   }
 
   BorderSide? get _border {
-    if (style == NurseButtonStyle.ghost) {
-      return const BorderSide(color: AppColors.outline);
+    switch (style) {
+      case NurseButtonStyle.ghost:
+        return const BorderSide(color: AppColors.outline);
+      case NurseButtonStyle.destructive:
+        return BorderSide(color: Colors.red.shade300, width: 1.2);
+      default:
+        return null;
     }
-    return null;
   }
 
   @override
@@ -75,7 +81,7 @@ class NurseButton extends StatelessWidget {
             ? null
             : [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withAlpha(51),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),

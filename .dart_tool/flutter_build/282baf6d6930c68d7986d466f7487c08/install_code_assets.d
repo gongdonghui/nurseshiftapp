@@ -1,0 +1,1 @@
+ /Users/gongshuai/workspace/nurseshift/.dart_tool/flutter_build/282baf6d6930c68d7986d466f7487c08/native_assets.json: 
