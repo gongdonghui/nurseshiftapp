@@ -78,3 +78,15 @@ class SwapTarget(Base):
     swap_request: Mapped[SwapRequest] = relationship(
         "SwapRequest", back_populates="targets"
     )
+
+
+class Colleague(Base):
+    __tablename__ = "colleagues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    department = Column(String(255), nullable=False)
+    facility = Column(String(255), nullable=False)
+    role = Column(String(255), nullable=True)
+    email = Column(String(255), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

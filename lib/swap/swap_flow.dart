@@ -15,12 +15,16 @@ class SwapActionSheet extends StatelessWidget {
     required this.onViewDetails,
     required this.onSwap,
     required this.onGiveAway,
+    this.swapEnabled = true,
+    this.disabledMessage,
   });
 
   final CalendarEvent event;
   final VoidCallback onViewDetails;
   final VoidCallback onSwap;
   final VoidCallback onGiveAway;
+  final bool swapEnabled;
+  final String? disabledMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +103,7 @@ class SwapActionSheet extends StatelessWidget {
                     height: 52,
                     child: NurseButton(
                       label: 'Swap',
-                      onPressed: onSwap,
+                      onPressed: swapEnabled ? onSwap : null,
                       leading: const Icon(Icons.swap_horiz_rounded),
                     ),
                   ),
@@ -111,13 +115,30 @@ class SwapActionSheet extends StatelessWidget {
                     child: NurseButton(
                       label: 'Give Away',
                       style: NurseButtonStyle.secondary,
-                      onPressed: onGiveAway,
+                      onPressed: swapEnabled ? onGiveAway : null,
                       leading: const Icon(Icons.send_rounded),
                     ),
                   ),
                 ),
               ],
             ),
+            if (!swapEnabled && disabledMessage != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  disabledMessage!,
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

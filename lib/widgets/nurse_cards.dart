@@ -127,12 +127,14 @@ class ColleagueSuggestionCard extends StatelessWidget {
     required this.department,
     required this.facility,
     this.onConnect,
+    this.buttonLabel = 'Connect',
   });
 
   final String name;
   final String department;
   final String facility;
   final VoidCallback? onConnect;
+  final String buttonLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +174,7 @@ class ColleagueSuggestionCard extends StatelessWidget {
             ),
           ),
           NurseButton(
-            label: 'Connect',
+            label: buttonLabel,
             onPressed: onConnect,
             style: NurseButtonStyle.secondary,
           ),

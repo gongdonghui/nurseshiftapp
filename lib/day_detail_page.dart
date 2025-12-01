@@ -78,26 +78,36 @@ class _DayDetailPageState extends State<DayDetailPage> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DayDetailCard(
-                date: widget.date,
-                schedule: _schedule,
-                onViewMore: () => _showComingSoon(context, 'Shift details'),
-                onViewSwaps: () => _showComingSoon(context, 'View swaps'),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  [
+                    DayDetailCard(
+                      date: widget.date,
+                      schedule: _schedule,
+                      onViewMore: () =>
+                          _showComingSoon(context, 'Shift details'),
+                      onViewSwaps: () =>
+                          _showComingSoon(context, 'View swaps'),
+                    ),
+                    const SizedBox(height: 20),
+                    if (widget.hasPendingSwap) ...[
+                      const _PendingSwapNotice(),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_hasEvent)
+                      ..._buildShiftDetailSections()
+                    else
+                      _buildEmptyState(),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-              if (widget.hasPendingSwap) const _PendingSwapNotice(),
-              if (widget.hasPendingSwap) const SizedBox(height: 16),
-              if (_hasEvent)
-                ..._buildShiftDetailSections()
-              else
-                _buildEmptyState(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

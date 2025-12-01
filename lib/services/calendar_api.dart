@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/calendar_event.dart';
+import '../models/colleague.dart';
 import '../models/swap_request.dart';
 
 class CalendarApiClient {
@@ -211,6 +212,51 @@ class CalendarApiClient {
     final Map<String, dynamic> data =
         jsonDecode(response.body) as Map<String, dynamic>;
     return SwapRequest.fromJson(data);
+  }
+
+  Future<List<Colleague>> fetchColleagues() async {
+    final response = await _client.get(_uri('/colleagues'));
+    if (response.statusCode != 200) {
+      throw ApiException(
+        'Failed to load colleagues (${response.statusCode}): ${response.body}',
+      );
+    }
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data
+        .map((item) => Colleague.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Colleague> createColleague({
+    required String name,
+    required String department,
+    required String facility,
+    String? role,
+    String? email,
+  }) async {
+    final Map<String, dynamic> payload = {
+      'name': name,
+      'department': department,
+      'facility': facility,
+      'role': role,
+      'email': email,
+    };
+
+    final response = await _client.post(
+      _uri('/colleagues'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        'Failed to create colleague (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final Map<String, dynamic> data =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    return Colleague.fromJson(data);
   }
 
   String _formatDate(DateTime value) =>

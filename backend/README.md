@@ -63,6 +63,8 @@ interactive Swagger UI at http://localhost:8000/docs.
 | POST   | /swap-requests | Create a swap or give away request    |
 | GET    | /swap-requests/{id} | Retrieve a single swap request   |
 | POST   | /swap-requests/{id}/retract | Mark a request as retracted |
+| GET    | /colleagues | List saved colleagues                   |
+| POST   | /colleagues | Create a new colleague entry            |
 
 **Query params for `GET /events`:**
 
@@ -126,3 +128,15 @@ exist, simplifying first-time setup.
 | id             | SERIAL PK |                                        |
 | swap_request_id| INT FK    | References `swap_requests.id`          |
 | colleague_name | text      | Person explicitly targeted by request  |
+
+`colleagues` table columns:
+
+| Column      | Type      | Notes                                    |
+| ----------- | --------- | ---------------------------------------- |
+| id          | SERIAL PK |                                          |
+| name        | text      | Colleague's full name                    |
+| department  | text      | Team or specialty                        |
+| facility    | text      | Work location                            |
+| role        | text      | Optional job title                       |
+| email       | text      | Optional contact                         |
+| created_at  | timestamp | Defaults to `now()`                      |

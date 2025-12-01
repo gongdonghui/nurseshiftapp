@@ -119,3 +119,18 @@ def retract_swap_request(db: Session, request_id: int) -> Optional[models.SwapRe
     db.commit()
     db.refresh(swap)
     return swap
+
+
+def list_colleagues(db: Session) -> List[models.Colleague]:
+    stmt = select(models.Colleague).order_by(models.Colleague.name.asc())
+    return list(db.scalars(stmt).all())
+
+
+def create_colleague(
+    db: Session, payload: schemas.ColleagueCreate
+) -> models.Colleague:
+    colleague = models.Colleague(**payload.model_dump())
+    db.add(colleague)
+    db.commit()
+    db.refresh(colleague)
+    return colleague

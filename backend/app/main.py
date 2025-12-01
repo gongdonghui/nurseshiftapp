@@ -123,6 +123,20 @@ def retract_swap_request(request_id: int, db: Session = Depends(get_db)):
     return _swap_to_read_schema(swap_request)
 
 
+@app.get("/colleagues", response_model=List[schemas.ColleagueRead])
+def list_colleagues(db: Session = Depends(get_db)):
+    colleagues = crud.list_colleagues(db)
+    return [schemas.ColleagueRead.model_validate(colleague) for colleague in colleagues]
+
+
+@app.post("/colleagues", response_model=schemas.ColleagueRead, status_code=201)
+def create_colleague(
+    *, db: Session = Depends(get_db), payload: schemas.ColleagueCreate
+):
+    colleague = crud.create_colleague(db, payload)
+    return schemas.ColleagueRead.model_validate(colleague)
+
+
 def _to_read_schema(event: models.Event) -> schemas.EventRead:
     return schemas.EventRead(
         id=event.id,

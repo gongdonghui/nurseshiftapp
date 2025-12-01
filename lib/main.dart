@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'add_event_page.dart';
 import 'day_detail_page.dart';
 import 'models/calendar_event.dart';
+import 'models/colleague.dart';
 import 'models/day_schedule.dart';
 import 'services/calendar_api.dart';
 import 'theme/app_colors.dart';
@@ -12,6 +13,8 @@ import 'widgets/bottom_nav_bar.dart';
 import 'widgets/day_detail_card.dart';
 import 'widgets/month_calendar.dart';
 import 'widgets/nurse_button.dart';
+import 'widgets/nurse_cards.dart';
+import 'widgets/nurse_text_field.dart';
 import 'widgets/segmented_tabs.dart';
 import 'models/swap_request.dart';
 import 'utils/event_type_icon.dart';
@@ -60,6 +63,10 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
   List<SwapRequest> _swapRequests = [];
   bool _isLoadingSwapRequests = false;
   String? _swapLoadError;
+  List<Colleague> _colleagues = [];
+  bool _isLoadingColleagues = false;
+  String? _colleagueError;
+  bool _hasLoadedColleagues = false;
   static const List<Map<String, String>> _swapInstructions = [
     {
       'title': 'Select the shift you want to get rid of',
@@ -132,8 +139,10 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
     return highlights;
   }
 
+  CalendarEvent? get _selectedEvent => _eventForDate(_selectedDate);
+
   DaySchedule? get _selectedSchedule =>
-      _eventForDate(_selectedDate)?.toDaySchedule();
+      _selectedEvent?.toDaySchedule();
 
   List<SwapRequest> get _selectedSwapRequests {
     final CalendarEvent? event = _eventForDate(_selectedDate);
@@ -153,6 +162,17 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
 
   String _formatMonth(DateTime value) =>
       '${_monthNames[value.month - 1]} ${value.year}';
+
+  bool get _hasSelectedShift => _selectedEvent != null;
+
+  bool get _canSwapSelectedShift =>
+      _hasSelectedShift && !_isPastDate(_selectedDate);
+
+  bool _isPastDate(DateTime date) {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    return date.isBefore(today);
+  }
 
   void _goToPreviousMonth() => _changeMonth(-1);
 
@@ -180,6 +200,13 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
       _openDayDetailPage(date);
     } else if (calendarTab == 1 && event != null) {
       _showSwapOptions(event);
+    }
+  }
+
+  void _handleBottomNavTap(int value) {
+    setState(() => bottomNavIndex = value);
+    if (value == 1 && !_hasLoadedColleagues) {
+      _loadColleagues();
     }
   }
 
@@ -303,7 +330,32 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
     }
   }
 
+  Future<void> _loadColleagues() async {
+    setState(() {
+      _isLoadingColleagues = true;
+      _colleagueError = null;
+    });
+    try {
+      final List<Colleague> results = await _apiClient.fetchColleagues();
+      if (!mounted) return;
+      setState(() {
+        _colleagues = results;
+        _hasLoadedColleagues = true;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _colleagueError = error.message);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _colleagueError = 'Failed to load colleagues: $error');
+    } finally {
+      if (!mounted) return;
+      setState(() => _isLoadingColleagues = false);
+    }
+  }
+
   Future<void> _showSwapOptions(CalendarEvent event) {
+    final bool canSwap = !_isPastDate(event.date);
     return showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -323,6 +375,10 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
           Navigator.of(sheetContext).pop();
           _openGiveawayFlow(event);
         },
+        swapEnabled: canSwap,
+        disabledMessage: canSwap
+            ? null
+            : 'This shift has already passed. Swaps and giveaways are only available for upcoming shifts.',
       ),
     );
   }
@@ -341,6 +397,23 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Giveaway request sent')),
+      );
+    }
+  }
+
+  Future<void> _openAddColleagueSheet() async {
+    final Colleague? colleague = await showModalBottomSheet<Colleague>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AddColleagueSheet(apiClient: _apiClient),
+    );
+    if (colleague != null && mounted) {
+      setState(() {
+        _colleagues = [colleague, ..._colleagues];
+        _hasLoadedColleagues = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${colleague.name} added to colleagues')),
       );
     }
   }
@@ -490,7 +563,8 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
             date: _selectedDate,
             schedule: _selectedSchedule,
             onViewMore: () => _showComingSoon('View more'),
-            onViewSwaps: () => setState(() => calendarTab = 1),
+            onViewSwaps:
+                _canSwapSelectedShift ? () => setState(() => calendarTab = 1) : null,
           ),
           if (_selectedSwapRequests.any(
             (request) => request.status == SwapRequestStatus.pending,
@@ -584,8 +658,14 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
             date: _selectedDate,
             schedule: _selectedSchedule,
             onViewMore: () => _showComingSoon('Shift details'),
-            onViewSwaps: () => setState(() => calendarTab = 1),
+            onViewSwaps: _canSwapSelectedShift
+                ? () => setState(() => calendarTab = 1)
+                : null,
           ),
+          if (_hasSelectedShift && !_canSwapSelectedShift) ...[
+            const SizedBox(height: 12),
+            const _SwapUnavailableBanner(),
+          ],
           if (selectedSwapRequests.any(
             (request) => request.status == SwapRequestStatus.pending,
           )) ...[
@@ -715,10 +795,125 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
     );
   }
 
+  Widget _buildColleaguesBody() {
+    if (_colleagueError != null && _colleagues.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _InlineError(
+            message: _colleagueError!,
+            onRetry: _loadColleagues,
+          ),
+        ),
+      );
+    }
+
+    final List<Widget> children = [
+      Text('Stay connected with your team', style: AppTextStyles.headingLarge),
+      const SizedBox(height: 8),
+      Text(
+        'Add colleagues so you can quickly reach out when you need coverage.',
+        style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+      ),
+      const SizedBox(height: 16),
+      if (_colleagueError != null)
+        _InlineError(message: _colleagueError!, onRetry: _loadColleagues),
+      if (_isLoadingColleagues && _colleagues.isEmpty) ...[
+        const SizedBox(height: 32),
+        const Center(child: CircularProgressIndicator()),
+      ] else if (_colleagues.isEmpty) ...[
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.outline),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('No colleagues yet', style: AppTextStyles.headingMedium),
+              const SizedBox(height: 6),
+              Text(
+                'Add your go-to teammates to share swaps faster.',
+                style:
+                    AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ] else ...[
+        Column(
+          children: [
+            for (final Colleague colleague in _colleagues) ...[
+              ColleagueSuggestionCard(
+                name: colleague.name,
+                department: colleague.department,
+                facility: colleague.facility,
+                buttonLabel: 'Message',
+                onConnect: () => _showComingSoon('Messaging'),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ),
+        if (_isLoadingColleagues) const LinearProgressIndicator(),
+      ],
+      const SizedBox(height: 24),
+      SizedBox(
+        height: 52,
+        width: double.infinity,
+        child: NurseButton(
+          label: 'Add Colleague',
+          leading: const Icon(Icons.person_add_alt_1_rounded),
+          onPressed: _openAddColleagueSheet,
+        ),
+      ),
+    ];
+
+    return RefreshIndicator(
+      onRefresh: _loadColleagues,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: children,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+      bottomNavigationBar: NurseBottomNav(
+        items: const [
+          NurseBottomNavItem(Icons.calendar_today, 'Calendar'),
+          NurseBottomNavItem(Icons.groups_rounded, 'Colleagues'),
+          NurseBottomNavItem(Icons.mail_outline, 'Inbox', badgeCount: 3),
+        ],
+        currentIndex: bottomNavIndex,
+        onTap: _handleBottomNavTap,
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    if (bottomNavIndex == 1) {
+      return AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: const Text('Colleagues'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            tooltip: 'Add colleague',
+            onPressed: _openAddColleagueSheet,
+          ),
+        ],
+      );
+    }
+    return AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Column(
@@ -738,46 +933,39 @@ class _NurseShiftDemoPageState extends State<NurseShiftDemoPage> {
             onPressed: _openAddEventPage,
           ),
         ],
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SegmentedTabs(
-                      tabs: const ['My Events', 'Swaps', 'Open Shifts'],
-                      activeIndex: calendarTab,
-                      onChanged: (value) => setState(() => calendarTab = value),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildActiveTab(),
-                    const SizedBox(height: 80),
-                  ],
-                ),
+      );
+  }
+
+  Widget _buildBody() {
+    if (bottomNavIndex == 1) {
+      return SafeArea(child: _buildColleaguesBody());
+    }
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SegmentedTabs(
+                    tabs: const ['My Events', 'Swaps', 'Open Shifts'],
+                    activeIndex: calendarTab,
+                    onChanged: (value) => setState(() => calendarTab = value),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActiveTab(),
+                  const SizedBox(height: 80),
+                ],
               ),
-            );
-          },
-        ),
-      ),
-      bottomNavigationBar: NurseBottomNav(
-        items: const [
-          NurseBottomNavItem(Icons.calendar_today, 'Calendar'),
-          NurseBottomNavItem(Icons.groups_rounded, 'Colleagues'),
-          NurseBottomNavItem(Icons.work_outline, 'Jobs'),
-          NurseBottomNavItem(Icons.school_outlined, 'Learn'),
-          NurseBottomNavItem(Icons.mail_outline, 'Inbox', badgeCount: 3),
-        ],
-        currentIndex: bottomNavIndex,
-        onTap: (value) => setState(() => bottomNavIndex = value),
+            ),
+          );
+        },
       ),
     );
   }
-}
 
 class _InlineError extends StatelessWidget {
   const _InlineError({
@@ -810,6 +998,127 @@ class _InlineError extends StatelessWidget {
             child: const Text('Retry'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AddColleagueSheet extends StatefulWidget {
+  const _AddColleagueSheet({required this.apiClient});
+
+  final CalendarApiClient apiClient;
+
+  @override
+  State<_AddColleagueSheet> createState() => _AddColleagueSheetState();
+}
+
+class _AddColleagueSheetState extends State<_AddColleagueSheet> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _departmentController = TextEditingController();
+  final TextEditingController _facilityController = TextEditingController();
+  final TextEditingController _roleController = TextEditingController();
+  bool _isSaving = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _departmentController.dispose();
+    _facilityController.dispose();
+    _roleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final String name = _nameController.text.trim();
+    final String department = _departmentController.text.trim();
+    final String facility = _facilityController.text.trim();
+    final String role = _roleController.text.trim();
+    if (name.isEmpty || department.isEmpty || facility.isEmpty) {
+      setState(() =>
+          _errorMessage = 'Name, department, and facility are required.');
+      return;
+    }
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      final Colleague colleague = await widget.apiClient.createColleague(
+        name: name,
+        department: department,
+        facility: facility,
+        role: role.isEmpty ? null : role,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(colleague);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = error.message);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = 'Failed to add colleague: $error');
+    } finally {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final EdgeInsets padding = MediaQuery.of(context).viewInsets;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          padding.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add colleague', style: AppTextStyles.headingMedium),
+            const SizedBox(height: 16),
+            NurseTextField(
+              label: 'Full name',
+              controller: _nameController,
+            ),
+            const SizedBox(height: 12),
+            NurseTextField(
+              label: 'Department',
+              controller: _departmentController,
+            ),
+            const SizedBox(height: 12),
+            NurseTextField(
+              label: 'Facility',
+              controller: _facilityController,
+            ),
+            const SizedBox(height: 12),
+            NurseTextField(
+              label: 'Role (optional)',
+              controller: _roleController,
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                style: AppTextStyles.body.copyWith(color: Colors.red),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: NurseButton(
+                label: _isSaving ? 'Saving...' : 'Save',
+                onPressed: _isSaving ? null : _submit,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1078,6 +1387,26 @@ class _RetractBanner extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SwapUnavailableBanner extends StatelessWidget {
+  const _SwapUnavailableBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'This shift already happened. Swap or give away requests are only available for upcoming shifts.',
+        style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
       ),
     );
   }

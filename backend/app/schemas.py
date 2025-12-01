@@ -77,3 +77,22 @@ class SwapRequestRead(SwapRequestBase):
 
     class Config:
         from_attributes = True
+
+
+class ColleagueBase(BaseModel):
+    name: str = Field(..., max_length=255)
+    department: str = Field(..., max_length=255)
+    facility: str = Field(..., max_length=255)
+    role: Optional[str] = Field(None, max_length=255)
+    email: Optional[str] = Field(None, max_length=255)
+
+
+class ColleagueCreate(ColleagueBase):
+    pass
+
+
+class ColleagueRead(ColleagueBase):
+    id: int
+
+    class Config:
+        from_attributes = True

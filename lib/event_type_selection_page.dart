@@ -160,13 +160,31 @@ class EventTypeSelectionPage extends StatelessWidget {
         ),
         title: const Text('Event Types'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          for (final category in EventTypeCategory.values) ...[
-            _SectionHeader(label: category.label),
-            ..._buildCategoryList(context, category),
-          ],
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: 24),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index >= EventTypeCategory.values.length) {
+                    return null;
+                  }
+                  final category = EventTypeCategory.values[index];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionHeader(label: category.label),
+                      ..._buildCategoryList(context, category),
+                      if (index != EventTypeCategory.values.length - 1)
+                        const SizedBox(height: 12),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
