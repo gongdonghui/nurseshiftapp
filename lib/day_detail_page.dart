@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'add_event_page.dart';
 import 'models/calendar_event.dart';
 import 'models/day_schedule.dart';
+import 'models/user.dart';
 import 'services/calendar_api.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_text_styles.dart';
@@ -35,6 +36,7 @@ class DayDetailPage extends StatefulWidget {
     this.event,
     required this.apiClient,
     this.hasPendingSwap = false,
+    this.currentUser,
   });
 
   final DateTime date;
@@ -42,6 +44,7 @@ class DayDetailPage extends StatefulWidget {
   final CalendarEvent? event;
   final CalendarApiClient apiClient;
   final bool hasPendingSwap;
+  final User? currentUser;
 
   @override
   State<DayDetailPage> createState() => _DayDetailPageState();
@@ -253,11 +256,16 @@ class _DayDetailPageState extends State<DayDetailPage> {
   }
 
   Future<void> _openAddEvent() async {
+    if (widget.currentUser == null) {
+      _showError('Log in to add events.');
+      return;
+    }
     final CalendarEvent? event = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AddEventPage(
           initialDate: widget.date,
           apiClient: widget.apiClient,
+          currentUser: widget.currentUser,
         ),
       ),
     );
@@ -268,11 +276,16 @@ class _DayDetailPageState extends State<DayDetailPage> {
 
   Future<void> _handleEditEvent() async {
     if (!_canModifyEvent || widget.event == null) return;
+    if (widget.currentUser == null) {
+      _showError('Log in to edit events.');
+      return;
+    }
     final CalendarEvent? event = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AddEventPage(
           existingEvent: widget.event,
           apiClient: widget.apiClient,
+          currentUser: widget.currentUser,
         ),
       ),
     );

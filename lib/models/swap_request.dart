@@ -55,6 +55,12 @@ class SwapRequest {
     this.availableStartDate,
     this.availableEndDate,
     this.notes,
+    this.acceptedByUserId,
+    this.acceptedAt,
+    this.acceptedByName,
+    this.acceptedByEmail,
+    this.ownerName,
+    this.ownerEmail,
   });
 
   final int id;
@@ -71,6 +77,12 @@ class SwapRequest {
   final String? notes;
   final CalendarEvent event;
   final DateTime createdAt;
+  final int? acceptedByUserId;
+  final DateTime? acceptedAt;
+  final String? acceptedByName;
+  final String? acceptedByEmail;
+  final String? ownerName;
+  final String? ownerEmail;
 
   factory SwapRequest.fromJson(Map<String, dynamic> json) {
     TimeOfDay? parseTime(String? value) {
@@ -103,6 +115,14 @@ class SwapRequest {
       notes: json['notes'] as String?,
       event: CalendarEvent.fromJson(json['event'] as Map<String, dynamic>),
       createdAt: DateTime.parse(json['created_at'] as String),
+      acceptedByUserId: json['accepted_by_user_id'] as int?,
+      acceptedAt: json['accepted_at'] == null
+          ? null
+          : DateTime.parse(json['accepted_at'] as String),
+      acceptedByName: json['accepted_by_name'] as String?,
+      acceptedByEmail: json['accepted_by_email'] as String?,
+      ownerName: json['owner_name'] as String?,
+      ownerEmail: json['owner_email'] as String?,
     );
   }
 

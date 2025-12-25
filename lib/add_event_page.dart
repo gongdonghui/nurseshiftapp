@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'event_type_selection_page.dart';
 import 'models/calendar_event.dart';
+import 'models/user.dart';
 import 'services/calendar_api.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_text_styles.dart';
@@ -13,12 +14,14 @@ class AddEventPage extends StatefulWidget {
     super.key,
     this.initialDate,
     this.existingEvent,
+    this.currentUser,
     CalendarApiClient? apiClient,
   }) : apiClient = apiClient ?? CalendarApiClient();
 
   final DateTime? initialDate;
   final CalendarEvent? existingEvent;
   final CalendarApiClient apiClient;
+  final User? currentUser;
 
   @override
   State<AddEventPage> createState() => _AddEventPageState();
@@ -27,6 +30,20 @@ class AddEventPage extends StatefulWidget {
 class _AddEventPageState extends State<AddEventPage> {
   static const String _defaultWorksiteLabel =
       'F.W. Huston Medical Center - Weight Management';
+  static const List<String> _monthNames = <String>[
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
   late DateTime _focusedMonth;
   late DateTime _selectedDate;
@@ -45,13 +62,14 @@ class _AddEventPageState extends State<AddEventPage> {
   void initState() {
     super.initState();
     final CalendarEvent? event = widget.existingEvent;
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
     final DateTime initialDate = event?.date ??
         widget.initialDate ??
-        DateTime(2025, 11, 12);
+        today;
     _focusedMonth = DateTime(initialDate.year, initialDate.month);
     _selectedDate = initialDate;
-    _multiDaySelection =
-        event != null ? {initialDate.day} : {12, 13, 14};
+    _multiDaySelection = {initialDate.day};
     _selectedEventType =
         findEventTypeById(event?.eventType ?? '') ?? defaultEventType;
     _startTime = event != null
@@ -74,6 +92,9 @@ class _AddEventPageState extends State<AddEventPage> {
       for (final int day in days) day: CalendarDayData(highlightColor: highlight),
     };
   }
+
+  String get _focusedMonthLabel =>
+      '${_monthNames[_focusedMonth.month - 1]} ${_focusedMonth.year}';
 
   @override
   void dispose() {
@@ -105,6 +126,7 @@ class _AddEventPageState extends State<AddEventPage> {
               endTime: _endTime,
               location: _worksiteLabel,
               eventType: _selectedEventType.id,
+              userId: widget.currentUser?.id,
               notes: _noteController.text.trim().isEmpty
                   ? null
                   : _noteController.text.trim(),
@@ -292,7 +314,7 @@ class _AddEventPageState extends State<AddEventPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'November 2025',
+                                _focusedMonthLabel,
                                 style: AppTextStyles.headingMedium,
                               ),
                               const SizedBox(height: 4),

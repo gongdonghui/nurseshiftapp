@@ -14,6 +14,8 @@ class NurseTextField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.isDense = false,
+    this.obscureText = false,
+    this.keyboardType,
   });
 
   final String? label;
@@ -24,6 +26,8 @@ class NurseTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final bool isDense;
+  final bool obscureText;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +35,8 @@ class NurseTextField extends StatelessWidget {
       controller: controller,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
       style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
